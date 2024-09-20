@@ -6,6 +6,21 @@
 #include <string>
 #include <vector>
 
+// Function to get substring from the last newline character
+std::string getSubstringFromLastNewline(const std::string& input) {
+	size_t lastNewlinePos = input.rfind('\n');
+
+	if (lastNewlinePos != std::string::npos) {
+		if (lastNewlinePos + 1 < input.length()) {
+			return input.substr(lastNewlinePos + 1);
+		} else {
+			return "";
+		}
+	} else {
+		return input;
+	}
+}
+
 // Utility to trim whitespace
 std::string trim(const std::string& str) {
 	const char* whitespace = " \t\n\r";
@@ -103,10 +118,12 @@ struct CustomCompare_property : public CustomCompare {
 		int x = g_map.size();
 		int y = x;
 
-		if (ai.find(',') != std::string::npos)
-			x = g_map.size() + 1;
-		if (bi.find(',') != std::string::npos)
-			y = g_map.size() + 1;
+		if (bi.empty()) return false;
+
+		if (ai.empty()) return true;
+
+		if (ai.find(',') != std::string::npos) x = g_map.size() + 1;
+		if (bi.find(',') != std::string::npos) y = g_map.size() + 1;
 
 		if (g_map.find(ai) != g_map.end()) x = g_map[ai];
 		if (g_map.find(bi) != g_map.end()) y = g_map[bi];
@@ -165,9 +182,25 @@ class DeviceTreeNode {
 	}
 };
 
+std::string GetNodePath(std::vector<DeviceTreeNode*> node_stack) {
+	std::string str;
+	if (node_stack.size() <= 1) return str;
+
+	for (int i = 1; i < node_stack.size(); i++) {
+		str += getSubstringFromLastNewline(
+		    getAfterColon(removeComments(trim(node_stack[i]->name))));
+		str += '/';
+	}
+
+	return str;
+}
+
 class DeviceTreeParser {
        public:
 	DeviceTreeNode* root;
+	std::string last_key_value;
+	std::map<DeviceTreeNode*, std::string> last_node_value;
+
 	std::map<std::string, DeviceTreeNode*>
 	    label_map;	// To store labeled nodes
 
@@ -176,7 +209,7 @@ class DeviceTreeParser {
 	~DeviceTreeParser() { delete root; }
 
 	// Parse the device tree file
-	void parse(const std::string& file_path) {
+	void parse(const std::string& file_path, bool warning = false) {
 		std::ifstream file(file_path);
 		if (!file.is_open()) {
 			std::cerr << "Error: Could not open file " << file_path
@@ -198,7 +231,6 @@ class DeviceTreeParser {
 		std::string buffer;
 		for (size_t i = 0; i < content.size(); ++i) {
 			char c = content[i];
-
 			if (c == '{') {
 				// Start of a new node
 				buffer = trim(buffer);
@@ -206,8 +238,22 @@ class DeviceTreeParser {
 				    new DeviceTreeNode(buffer);
 				current_node->add_child(new_node);
 				node_stack.push_back(new_node);
+
+				CustomCompare compare;
+
+				if (compare(new_node->name,
+					    last_node_value[current_node]) &&
+				    warning)
+					std::cout << "wrong order: "
+						  << GetNodePath(node_stack)
+						  << "\n";
+
+				last_node_value[current_node] = new_node->name;
+
 				current_node = new_node;
 				buffer.clear();
+				last_key_value = "";
+
 			} else if (c == '}') {
 				// End of current node
 				node_stack.pop_back();
@@ -222,6 +268,20 @@ class DeviceTreeParser {
 						current_node->add_property(
 						    key_value.first,
 						    key_value.second);
+
+						CustomCompare_property compare;
+						if (compare(key_value.first,
+							    last_key_value) &&
+						    warning)
+							std::cout
+							    << "wrong order: "
+							    << GetNodePath(
+								   node_stack)
+							    << key_value.first
+							    << "\n";
+
+						last_key_value =
+						    key_value.first;
 					}
 				}
 				buffer.clear();
@@ -252,43 +312,39 @@ class DeviceTreeParser {
 	}
 };
 
-const char *g_order[] = {
+const char* g_order[] = {
 	"compatible",
-        "reg",
-        "reg-names",
-        "ranges",
-        "#interrupt-cells",
-        "interrupt-controller",
-        "interrupts",
-        "interrupt-names",
-        "#gpio-cells",
-        "gpio-controller",
-        "gpio-ranges",
-        "#address-cells",
-        "#size-cells",
-        "clocks",
-        "clock-names",
-        "assigned-clocks",
-        "assigned-clock-parents",
-        "assigned-clock-rates",
-        "dmas",
-        "dma-names",
+	"reg",
+	"reg-names",
+	"ranges",
+	"#interrupt-cells",
+	"interrupt-controller",
+	"interrupts",
+	"interrupt-names",
+	"#gpio-cells",
+	"gpio-controller",
+	"gpio-ranges",
+	"#address-cells",
+	"#size-cells",
+	"clocks",
+	"clock-names",
+	"assigned-clocks",
+	"assigned-clock-parents",
+	"assigned-clock-rates",
+	"dmas",
+	"dma-names",
 };
 
-int main(int argc, char* argv[]) {
-
-	for (int i = 0; i < sizeof(g_order) / sizeof(g_order[0]); i++)
-		g_map[g_order[i]] = i;
-
-	if (argc < 2) {
-		std::cerr << "Usage: " << argv[0]
-			  << " <device_tree_file.dts>\n";
-		return 1;
+int dt_format(std::string filename, bool check) {
+	if (g_map.size() == 0) {
+		for (int i = 0; i < sizeof(g_order) / sizeof(g_order[0]); i++)
+			g_map[g_order[i]] = i;
 	}
 
 	DeviceTreeParser parser;
-	parser.parse(argv[1]);
-	parser.print_tree();
+	parser.parse(filename, check);
+
+	if (!check) parser.print_tree();
 
 	return 0;
 }
