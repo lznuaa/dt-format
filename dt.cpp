@@ -102,6 +102,12 @@ struct CustomCompare_property : public CustomCompare {
 	bool operator()(const std::string& ai, const std::string& bi) const {
 		int x = g_map.size();
 		int y = x;
+
+		if (ai.find(',') != std::string::npos)
+			x = g_map.size() + 1;
+		if (bi.find(',') != std::string::npos)
+			y = g_map.size() + 1;
+
 		if (g_map.find(ai) != g_map.end()) x = g_map[ai];
 		if (g_map.find(bi) != g_map.end()) y = g_map[bi];
 
@@ -272,7 +278,7 @@ const char *g_order[] = {
 int main(int argc, char* argv[]) {
 
 	for (int i = 0; i < sizeof(g_order) / sizeof(g_order[0]); i++)
-		g_map[g_order[i]] = i + 1;
+		g_map[g_order[i]] = i;
 
 	if (argc < 2) {
 		std::cerr << "Usage: " << argv[0]
