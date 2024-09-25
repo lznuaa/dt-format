@@ -112,24 +112,23 @@ struct CustomCompare {
 };
 
 std::map<std::string, int> g_map;
+int g_common_pri;
+int g_vendor_pri;
 
 struct CustomCompare_property : public CustomCompare {
 	bool operator()(const std::string& ai, const std::string& bi) const {
-		int x = g_map.size();
+		int x = g_common_pri;
 		int y = x;
 
 		if (bi.empty()) return false;
 
 		if (ai.empty()) return true;
 
-		if (ai.find(',') != std::string::npos) x = g_map.size() + 1;
-		if (bi.find(',') != std::string::npos) y = g_map.size() + 1;
+		if (ai.find(',') != std::string::npos) x = g_vendor_pri;
+		if (bi.find(',') != std::string::npos) y = g_vendor_pri;
 
 		if (g_map.find(ai) != g_map.end()) x = g_map[ai];
 		if (g_map.find(bi) != g_map.end()) y = g_map[bi];
-
-		if (ai == "status") x = INT32_MAX;
-		if (bi == "status") y = INT32_MAX;
 
 		if (x != y) return x < y;
 
@@ -312,6 +311,7 @@ class DeviceTreeParser {
 	}
 };
 
+//first group
 const char* g_order[] = {
 	"compatible",
 	"reg",
@@ -335,10 +335,38 @@ const char* g_order[] = {
 	"dma-names",
 };
 
+//common property alphabet order.
+
+//common property put after alphabet order
+const char* g_order_2nd[] = {
+	"gpio",
+	"enable-active-high",
+};
+
+//vendor property
+
+//"status", last one
+const char* g_order_last[] = {
+	"status",
+};
+
 int dt_format(std::string filename, bool check) {
 	if (g_map.size() == 0) {
-		for (int i = 0; i < sizeof(g_order) / sizeof(g_order[0]); i++)
-			g_map[g_order[i]] = i;
+		int prj = 0;
+		for (int j = 0; j < sizeof(g_order) / sizeof(g_order[0]); j++)
+			g_map[g_order[j]] = prj++;
+
+		g_common_pri = prj;
+		prj++;
+		for (int j = 0; j < sizeof(g_order_2nd) / sizeof(g_order_2nd[0]); j++)
+			g_map[g_order_2nd[j]] = prj++;
+
+		g_vendor_pri = prj;
+		prj++;
+
+		for (int j = 0; j < sizeof(g_order_last) / sizeof(g_order_last[0]); j++)
+			g_map[g_order_last[j]] = prj++;
+
 	}
 
 	DeviceTreeParser parser;
