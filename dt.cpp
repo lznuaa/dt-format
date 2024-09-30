@@ -5,6 +5,22 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <cctype>
+#include <locale>
+
+using namespace std;
+
+inline std::string str_to_lower(const std::string &str)
+{
+        std::locale loc;
+        string s;
+
+        for (size_t i = 0; i < str.size(); i++)
+                s.push_back(std::tolower(str[i], loc));
+
+        return s;
+}
 
 // Function to get substring from the last newline character
 std::string getSubstringFromLastNewline(const std::string& input) {
@@ -79,11 +95,16 @@ bool extractHexValue(const std::string& str, unsigned long& hexValue) {
 }
 
 std::string getAfterColon(const std::string& str) {
+	std::string r = str;
+
 	size_t pos = str.find(':');
 	if (pos != std::string::npos && pos + 1 < str.size()) {
-		return trim(str.substr(pos + 1));
+		r = trim(str.substr(pos + 1));
 	}
-	return str;  // If no colon, return the original string
+
+	r = str_to_lower(r);
+
+	return r;  // If no colon, return the original string
 }
 
 // Custom comparator for the map
