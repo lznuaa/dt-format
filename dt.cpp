@@ -104,6 +104,9 @@ std::string getAfterColon(const std::string& str) {
 
 	r = str_to_lower(r);
 
+	//make phy-names after phys
+	std::replace(r.begin(), r.end(), '-', '~');
+
 	return r;  // If no colon, return the original string
 }
 
