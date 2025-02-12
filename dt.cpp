@@ -343,6 +343,7 @@ const char* g_order[] = {
 	"ranges",
 	"#interrupt-cells",
 	"interrupt-controller",
+	"interrupt-parent",
 	"interrupts",
 	"interrupt-names",
 	"#gpio-cells",
