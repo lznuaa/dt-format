@@ -107,6 +107,9 @@ std::string getAfterColon(const std::string& str) {
 	//make phy-names after phys
 	std::replace(r.begin(), r.end(), '-', '~');
 
+	//treat path split '/' as '@' to make order according to actual naming.
+	std::replace(r.begin(), r.end(), '/', '&');
+
 	return r;  // If no colon, return the original string
 }
 
