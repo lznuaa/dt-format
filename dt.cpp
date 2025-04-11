@@ -123,6 +123,9 @@ struct CustomCompare {
 		bool bHasHex = extractHexValue(b, hexB);
 
 		if (aHasHex && bHasHex) {
+			if (hexA == hexB)
+				return getAfterColon(a) < getAfterColon(b);
+
 			return hexA < hexB;  // Compare by hex value if both
 					     // have @hexvalue
 		} else if (aHasHex) {
