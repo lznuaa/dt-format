@@ -169,18 +169,32 @@ struct CustomCompare_property : public CustomCompare {
 class DeviceTreeNode {
        public:
 	std::string name;
+	int line_num;
 	std::map<std::string, std::string, CustomCompare_property> properties;
 	std::map<std::string, DeviceTreeNode*, CustomCompare> children;
 
-	DeviceTreeNode(const std::string& name) : name(name) {}
+	DeviceTreeNode(const std::string& name, int line) : name(name), line_num(line) {}
 
 	// Add property key-value pair
 	void add_property(const std::string& key, const std::string& value) {
 		properties[key] = value;
 	}
 
+	string get_string_key(DeviceTreeNode* child)
+	{
+		size_t pos = child->name.find('@');
+		string str = child->name.substr(0, pos);
+
+		str += "^";
+		str += to_string(child->line_num);
+		if (pos < child->name.size())
+			str += child->name.substr(pos);
+
+		return str;
+	}
+
 	// Add child node
-	void add_child(DeviceTreeNode* child) { children[child->name] = child; }
+	void add_child(DeviceTreeNode* child) { children[get_string_key(child)] = child; }
 
 	// Destructor to free children
 	~DeviceTreeNode() {
@@ -233,7 +247,7 @@ class DeviceTreeParser {
 	std::map<std::string, DeviceTreeNode*>
 	    label_map;	// To store labeled nodes
 
-	DeviceTreeParser() { root = new DeviceTreeNode("root"); }
+	DeviceTreeParser() { root = new DeviceTreeNode("root", 0); }
 
 	~DeviceTreeParser() { delete root; }
 
@@ -263,8 +277,9 @@ class DeviceTreeParser {
 			if (c == '{') {
 				// Start of a new node
 				buffer = trim(buffer);
+
 				DeviceTreeNode* new_node =
-				    new DeviceTreeNode(buffer);
+				    new DeviceTreeNode(buffer, i);
 				current_node->add_child(new_node);
 				node_stack.push_back(new_node);
 
