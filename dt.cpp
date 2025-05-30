@@ -180,10 +180,14 @@ class DeviceTreeNode {
 		properties[key] = value;
 	}
 
-	string get_string_key(DeviceTreeNode* child)
+	string get_string_key(const DeviceTreeNode* child)
 	{
 		size_t pos = child->name.find('@');
 		string str = child->name.substr(0, pos);
+
+		size_t pn = child->name.rfind('\n');
+		if (pn != std::string::npos)
+			str = str.substr(pn + 1);
 
 		str += "^";
 		str += to_string(child->line_num);
