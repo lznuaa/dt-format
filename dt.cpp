@@ -208,8 +208,11 @@ class DeviceTreeNode {
 		std::string indentation;
 		if (indent >= 0) {
 			indentation = std::string(indent, '\t');
-			std::cout << "\n" << indentation << name << " {\n";
+			std::cout << "\n" << indentation << name << " {";
 		}
+
+		if (!properties.empty())
+			std::cout << "\n";
 
 		for (const auto& prop : properties) {
 			std::cout << indentation << "\t" << prop.first;
