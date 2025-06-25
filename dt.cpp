@@ -287,6 +287,7 @@ class DeviceTreeParser {
 				if (c == '{') return last_cr;
 				break;
 			case START_S:
+				mode = NORMAL;
 				if (c == '/') mode = COMMENT_SINGLE;
 				if (c == '*') mode = COMMENT_MULTI;
 				break;
