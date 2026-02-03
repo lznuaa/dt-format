@@ -429,6 +429,7 @@ const char* g_order[] = {
 	"reg",
 	"reg-names",
 	"ranges",
+	"regulator-name",
 	"#interrupt-cells",
 	"interrupt-controller",
 	"interrupt-parent",
