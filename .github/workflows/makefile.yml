@@ -16,3 +16,6 @@ jobs:
 
     - name: Install dependencies
       run: make
+
+    - name: Test
+      run: ./dt-format ./test/simple_001.dts
