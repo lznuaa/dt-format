@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cctype>
 #include <locale>
+#include <string.h>
 
 #define HEAD_PRO "_____HEADER____"
 
@@ -15,13 +16,13 @@ using namespace std;
 
 inline std::string str_to_lower(const std::string &str)
 {
-        std::locale loc;
-        string s;
+	std::locale loc;
+	string s;
 
-        for (size_t i = 0; i < str.size(); i++)
-                s.push_back(std::tolower(str[i], loc));
+	for (size_t i = 0; i < str.size(); i++)
+		s.push_back(std::tolower(str[i], loc));
 
-        return s;
+	return s;
 }
 
 // Function to get substring from the last newline character
@@ -214,16 +215,12 @@ class DeviceTreeNode {
 		std::string indentation;
 		if (indent >= 0) {
 			indentation = std::string(indent, '\t');
-			std::cout << "\n" << indentation << name << " {";
+			std::cout << indentation << name << " {\n";
 		}
 
-		if (!properties.empty() && indent >= 0)
-			std::cout << "\n";
-
 		for (const auto& prop : properties) {
-
 			if (indent >= 0) {
-				std::cout << indentation << "\t" << prop.first;
+				std::cout  << indentation << "\t" << prop.first;
 
 				if (prop.second.length() > 0)
 					std::cout << " = " << prop.second;
@@ -233,7 +230,16 @@ class DeviceTreeNode {
 				std::cout << prop.second;
 			}
 		}
+
+		if (!properties.empty())
+			std::cout << "\n";
+
+		int i = 0;
+
 		for (const auto& child : children) {
+			if (i)
+				std::cout << "\n";
+			i++;
 			child.second->print_tree(indent + 1);
 		}
 
@@ -254,6 +260,52 @@ std::string GetNodePath(std::vector<DeviceTreeNode*> node_stack) {
 	return str;
 }
 
+size_t find_dt_token(const std::string &s, size_t start, const char * token)
+{
+	size_t i = 0;
+	size_t last_cr = start;
+	enum {  START_S,
+		NORMAL,
+		COMMENT_SINGLE,
+		COMMENT_MULTI,
+		COMMENT_MULTI_E, } mode = NORMAL;
+
+	for (i = start; i < s.size(); i++) {
+		char c = s[i];
+		if (c == '\n')
+			last_cr = i + 1;
+
+		switch (mode) {
+		case NORMAL:
+			if (c == '/') mode = START_S;
+			if (strchr(token, c)) return i;
+			break;
+		case START_S:
+			mode = NORMAL;
+			if (c == '/') mode = COMMENT_SINGLE;
+			if (c == '*') mode = COMMENT_MULTI;
+			break;
+		case COMMENT_SINGLE:
+			if (c == '\n') mode = NORMAL;
+			break;
+		case COMMENT_MULTI:
+			if (c == '*') mode = COMMENT_MULTI_E;
+			break;
+		case COMMENT_MULTI_E:
+			if (c == '/')
+				mode = NORMAL;
+			else
+				mode = COMMENT_MULTI;
+		break;
+		default:
+			mode = NORMAL;
+			break;
+		}
+	}
+
+	return i;
+}
+
 class DeviceTreeParser {
        public:
 	DeviceTreeNode* root;
@@ -266,51 +318,6 @@ class DeviceTreeParser {
 	DeviceTreeParser() { root = new DeviceTreeNode("root", 0); }
 
 	~DeviceTreeParser() { delete root; }
-
-	size_t find_dt_start(std::string &s) {
-		size_t i = 0;
-		size_t last_cr = 0;
-		enum {	START_S,
-			NORMAL,
-			COMMENT_SINGLE,
-			COMMENT_MULTI,
-			COMMENT_MULTI_E, } mode = NORMAL;
-
-		for (i = 0; i < s.size(); i++) {
-			char c = s[i];
-			if (c == '\n')
-				last_cr = i + 1;
-
-			switch (mode) {
-			case NORMAL:
-				if (c == '/') mode = START_S;
-				if (c == '{') return last_cr;
-				break;
-			case START_S:
-				mode = NORMAL;
-				if (c == '/') mode = COMMENT_SINGLE;
-				if (c == '*') mode = COMMENT_MULTI;
-				break;
-			case COMMENT_SINGLE:
-				if (c == '\n') mode = NORMAL;
-				break;
-			case COMMENT_MULTI:
-				if (c == '*') mode = COMMENT_MULTI_E;
-				break;
-			case COMMENT_MULTI_E:
-				if (c == '/')
-					mode = NORMAL;
-				else
-					mode = COMMENT_MULTI;
-				break;
-			default:
-				mode = NORMAL;
-				break;
-			}
-		}
-
-		return 0;
-	}
 
 	// Parse the device tree file
 	void parse(const std::string& file_path, bool warning = false) {
@@ -328,25 +335,32 @@ class DeviceTreeParser {
 		// Trim the content
 		content = trim(content);
 
-		size_t start = find_dt_start(content);
-
 		DeviceTreeNode* current_node = root;
 		std::vector<DeviceTreeNode*> node_stack = {root};
 
-		size_t pos = find_dt_start(content);
+		size_t pos = find_dt_token(content, 0, "{");
+		size_t old_pos = content.rfind("\n", pos);
+		if (old_pos == std::string::npos)
+			old_pos = 0;
 
-		if (pos > 0)
-			root -> add_property(HEAD_PRO, content.substr(0, pos - 1));
+		if (old_pos > 0)
+			root -> add_property(HEAD_PRO, content.substr(0, old_pos - 1));
 
 		std::string buffer;
-		for (size_t i = start; i < content.size(); ++i) {
-			char c = content[i];
+
+		const char* token = "{};";
+
+		while((pos = find_dt_token(content, old_pos, token)) < content.size()) {
+			char c = content[pos];
+			buffer = content.substr(old_pos, pos - old_pos);
+			old_pos = pos + 1;
+
 			if (c == '{') {
 				// Start of a new node
 				buffer = trim(buffer);
 
 				DeviceTreeNode* new_node =
-				    new DeviceTreeNode(buffer, i);
+				    new DeviceTreeNode(buffer, pos);
 				current_node->add_child(new_node);
 				node_stack.push_back(new_node);
 
@@ -364,7 +378,6 @@ class DeviceTreeParser {
 				current_node = new_node;
 				buffer.clear();
 				last_key_value = "";
-
 			} else if (c == '}') {
 				// End of current node
 				node_stack.pop_back();
@@ -395,26 +408,18 @@ class DeviceTreeParser {
 						    key_value.first;
 					}
 				}
-				buffer.clear();
-			} else {
-				buffer += c;
 			}
 		}
 	}
 
 	void print_tree() const { root->print_tree(); }
 
-       private:
-	// Utility to remove comments
-	std::string remove_comments(const std::string& content) const {
-		std::regex comment_regex(R"(\/\*.*?\*\/|\/\/.*$)");
-		return std::regex_replace(content, comment_regex, "");
-	}
+      private:
 
 	// Parse a key-value pair from a line like "key = value;"
-	std::pair<std::string, std::string> parse_key_value(
+	std::pair<std::string, std::string> parse_key_value (
 	    const std::string& line) const {
-		size_t equal_pos = line.find('=');
+		size_t equal_pos = find_dt_token(line, 0, "=");
 		if (equal_pos == std::string::npos) return {trim(line), ""};
 
 		std::string key = trim(line.substr(0, equal_pos));

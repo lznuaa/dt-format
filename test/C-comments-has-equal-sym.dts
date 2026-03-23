@@ -1,0 +1,14 @@
+/ {
+	uart3_rs_232_485_mux: mux-controller-3 {
+		compatible = "gpio-mux";
+		/*
+		 * Mux switches uart3 tx/rx between rs232 and rs485
+		 * transceivers. using one GPIO: 0 = rs232; 1 = rs485.
+		 */
+		mux-gpios = <&tca6416_u20 1 GPIO_ACTIVE_HIGH>;
+		/* default rs232 */
+                idle-state = <0>;
+		#mux-control-cells = <0>;
+
+	};
+};
