@@ -231,7 +231,7 @@ class DeviceTreeNode {
 			}
 		}
 
-		if (!properties.empty())
+		if (!properties.empty() && !children.empty())
 			std::cout << "\n";
 
 		int i = 0;

@@ -9,6 +9,5 @@
 		/* default rs232 */
                 idle-state = <0>;
 		#mux-control-cells = <0>;
-
 	};
 };
