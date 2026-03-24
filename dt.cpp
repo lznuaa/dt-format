@@ -303,7 +303,7 @@ size_t find_dt_token(const std::string &s, size_t start, const char * token)
 		}
 	}
 
-	return i;
+	return i == s.size() ? std::string::npos : i;
 }
 
 class DeviceTreeParser {

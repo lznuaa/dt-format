@@ -1,0 +1,12 @@
+&connector {
+	compatible = "usb-c-connector";
+	data-role = "dual";
+	label = "USB-C";
+	op-sink-microwatt = <0>;
+	power-role = "dual";
+	self-powered;
+	sink-pdos = <PDO_FIXED(5000, 0, PDO_FIXED_USB_COMM)>;
+	source-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
+	try-power-role = "sink";
+
+};
